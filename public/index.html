@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>SafeStreets Mumbai - Community Safety Platform for Women</title>
+  <meta name="description" content="SafeStreets Mumbai is a women-led community safety map. Share and explore honest, time-specific experiences of Mumbai's roads, transit stations, and neighbourhoods.">
+  <meta name="theme-color" content="#150826">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="SafeStreets Mumbai - Community Safety Platform">
+  <meta property="og:description" content="Know the road before you take it. Practical, time-specific route and street safety context from Mumbai women.">
+  <meta property="og:type" content="website">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/screens.css">
+
+  <!-- Mobile App & PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SafeStreets">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <!-- Brand Logo -->
+      <a class="brand-logo" data-navigate="home" href="#home" title="SafeStreets Mumbai Home">
+        <div class="logo-badge" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v4"/>
+            <path d="M12 16h.01"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">SafeStreets</span>
+          <span class="logo-tagline">Mumbai Community</span>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="desktop-nav" role="navigation" aria-label="Main Navigation">
+        <button class="nav-link active" data-navigate="home">Home</button>
+        <button class="nav-link" data-navigate="map">Explore Map</button>
+        <button class="nav-link" data-navigate="route">Plan My Route</button>
+        <button class="nav-link" data-navigate="review">+ Share Review</button>
+        <button class="nav-link" data-navigate="guidelines">Safety & Privacy</button>
+        <button class="nav-link" data-navigate="moderator" style="font-size: 0.85rem; opacity: 0.85;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+          Moderator
+        </button>
+      </nav>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Multi-language Toggle -->
+        <select class="lang-selector" id="app-lang-select" aria-label="Choose Language">
+          <option value="en">EN • English</option>
+          <option value="hi">HI • हिंदी</option>
+          <option value="mr">MR • मराठी</option>
+        </select>
+
+        <!-- Urgent Help Button -->
+        <button class="btn-urgent-header" onclick="SafeStreetsEmergency.openUrgentHelpModal()" title="Emergency Helplines">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+          <span data-i18n="btn_urgent_help">Urgent Help</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Offline Status Banner -->
+  <div class="offline-banner" id="offline-banner" role="status">
+    <span>⚡ Offline Mode: Showing cached Mumbai community safety data</span>
+  </div>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-wrapper" id="main-content" role="main">
+
+    <!-- ======================================================================
+         SCREEN 1: HOME / LANDING SCREEN
+         ====================================================================== -->
+    <section class="screen-view" id="screen-home">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Women-Led Community Network • Mumbai
+          </div>
+          <h1 class="hero-title">
+            <span data-i18n="tagline">Know the road before you take it.</span>
+          </h1>
+          <p class="hero-subtext" data-i18n="hero_subtext">
+            A community map where women share honest, time-specific experiences of Mumbai’s roads, transit stations, and neighbourhoods.
+          </p>
+          <div class="hero-ctas">
+            <button class="btn btn-primary btn-lg" data-navigate="map" data-i18n="btn_explore">
+              Explore Safety Reviews
+            </button>
+            <button class="btn btn-outline btn-lg" data-navigate="review" data-i18n="btn_share">
+              + Share a Review
+            </button>
+            <button class="btn btn-outline btn-lg" data-navigate="route" data-i18n="btn_plan_route">
+              Plan My Route
+            </button>
+            <button class="btn btn-accent btn-lg btn-install-android" onclick="installSafeStreetsApp()" title="Install SafeStreets on your Android device">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              Install Android App
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual Map Preview Card -->
+        <div class="hero-preview-card">
+          <div class="preview-map-box">
+            <div class="preview-live-pulse-badge">
+              <span class="pulse-dot"></span>
+              Live Community Pulse
+            </div>
+
+            <!-- Stylized Mumbai Map Silhouette & Visual Color Pins -->
+            <svg class="preview-map-svg" viewBox="0 0 500 360" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="waterGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#E2DED9" />
+                  <stop offset="100%" stop-color="#D4CFC9" />
+                </linearGradient>
+                <linearGradient id="landGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#FAF7F5" />
+                  <stop offset="100%" stop-color="#F2EBE5" />
+                </linearGradient>
+              </defs>
+              <rect width="500" height="360" fill="url(#waterGrad)" />
+              
+              <!-- Mumbai Peninsula Coastline -->
+              <path d="M 120 10 Q 140 80 160 120 T 170 190 T 150 240 Q 120 280 110 320 L 160 340 L 220 340 L 270 290 Q 290 200 280 130 T 260 40 Z" fill="url(#landGrad)" stroke="#D6C9C0" stroke-width="2" />
+              
+              <!-- Arterial Highway Lines -->
+              <path d="M 170 20 Q 190 100 200 180 T 160 310" fill="none" stroke="#E5D6CC" stroke-width="4" stroke-dasharray="6,4" />
+              <path d="M 230 40 Q 240 120 230 200 T 210 310" fill="none" stroke="#E5D6CC" stroke-width="4" stroke-dasharray="6,4" />
+              <!-- Sea Link Arc -->
+              <path d="M 160 190 Q 110 230 140 270" fill="none" stroke="#B8A79B" stroke-width="3" />
+
+              <!-- Visual Pin: Dadar (Green: Comfortable) -->
+              <g transform="translate(190, 210)" style="cursor: pointer;" onclick="SafeStreetsApp.navigate('map')">
+                <circle cx="0" cy="0" r="16" fill="rgba(45,122,88,0.2)" />
+                <circle cx="0" cy="0" r="8" fill="#2D7A58" stroke="#FFFFFF" stroke-width="2" />
+                <text x="14" y="4" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="700" fill="#1B563C">Dadar West (Comfortable)</text>
+              </g>
+
+              <!-- Visual Pin: Kurla Skywalk (Red: Avoid Alone) -->
+              <g transform="translate(240, 160)" style="cursor: pointer;" onclick="SafeStreetsApp.navigate('map')">
+                <circle cx="0" cy="0" r="16" fill="rgba(184,58,75,0.2)" />
+                <circle cx="0" cy="0" r="8" fill="#B83A4B" stroke="#FFFFFF" stroke-width="2" />
+                <text x="14" y="4" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="700" fill="#8E2131">Kurla Skywalk (Avoid Alone)</text>
+              </g>
+
+              <!-- Visual Pin: BKC G Block (Amber: Use Caution) -->
+              <g transform="translate(225, 185)" style="cursor: pointer;" onclick="SafeStreetsApp.navigate('map')">
+                <circle cx="0" cy="0" r="16" fill="rgba(201,122,30,0.2)" />
+                <circle cx="0" cy="0" r="8" fill="#C97A1E" stroke="#FFFFFF" stroke-width="2" />
+                <text x="14" y="4" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="700" fill="#96540B">BKC Avenue (Caution Late)</text>
+              </g>
+
+              <!-- Visual Pin: Bandra Linking Rd (Green: Comfortable) -->
+              <g transform="translate(165, 170)" style="cursor: pointer;" onclick="SafeStreetsApp.navigate('map')">
+                <circle cx="0" cy="0" r="16" fill="rgba(45,122,88,0.2)" />
+                <circle cx="0" cy="0" r="8" fill="#2D7A58" stroke="#FFFFFF" stroke-width="2" />
+                <text x="-120" y="4" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="700" fill="#1B563C">Bandra Linking Rd</text>
+              </g>
+
+              <!-- Visual Pin: Marine Drive (Green: Comfortable) -->
+              <g transform="translate(130, 310)" style="cursor: pointer;" onclick="SafeStreetsApp.navigate('map')">
+                <circle cx="0" cy="0" r="16" fill="rgba(45,122,88,0.2)" />
+                <circle cx="0" cy="0" r="8" fill="#2D7A58" stroke="#FFFFFF" stroke-width="2" />
+                <text x="14" y="4" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="700" fill="#1B563C">Marine Drive</text>
+              </g>
+            </svg>
+
+            <!-- Bottom overlay banner inside preview card -->
+            <div class="preview-overlay-card">
+              <div>
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--color-plum);">Interactive Mumbai Safety Grid</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">12 suburban zones • Updated by local commuters</div>
+              </div>
+              <button class="btn btn-primary btn-sm" data-navigate="map">
+                Open Map
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Community Stats Ribbon -->
+      <div class="stats-ribbon">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-item-num" id="stat-locations">12</div>
+            <div class="stat-item-label">Transit Hubs Covered</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item-num" id="stat-reviews">24</div>
+            <div class="stat-item-label">Verified Experience Reports</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item-num" id="stat-confidence">88%</div>
+            <div class="stat-item-label">Avg Community Confidence</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item-num" id="stat-corridors">5</div>
+            <div class="stat-item-label">Active Rail & Metro Corridors</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust Pillars Section -->
+      <section class="trust-section">
+        <div class="section-header">
+          <span class="hero-pill" style="margin-bottom: 0.75rem;">Community-First Principles</span>
+          <h2 data-i18n="trust_title">Built on Trust, Privacy & Calm Context</h2>
+          <p data-i18n="trust_sub">
+            Designed around women’s real travel decisions with practical, community-grounded context rather than fear or alarmist ratings.
+          </p>
+        </div>
+
+        <div class="trust-pillars-grid">
+          <div class="trust-card">
+            <div class="trust-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 data-i18n="trust_1_title">Place + Time Matter</h3>
+            <p data-i18n="trust_1_desc">
+              A station buzzing at 6 PM feels vastly different at 11 PM. Reports distinguish between morning, afternoon, evening, and after-dark hours.
+            </p>
+          </div>
+
+          <div class="trust-card">
+            <div class="trust-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3 data-i18n="trust_2_title">Anonymous by Default</h3>
+            <p data-i18n="trust_2_desc">
+              No profiles, usernames, or live location tracking. Automated PII scrubbing redacts phone numbers, vehicle plates, and private addresses.
+            </p>
+          </div>
+
+          <div class="trust-card">
+            <div class="trust-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h3 data-i18n="trust_3_title">Practical Guidance</h3>
+            <p data-i18n="trust_3_desc">
+              Constructive tips from other women: working municipal lighting, open medical stores, regulated auto stands, and safer entrance bridges.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Mumbai Hubs Quick Navigation -->
+      <section style="max-width: var(--max-content-width); margin: 0 auto 5rem; padding: 0 1.5rem;">
+        <h2 style="font-size: 1.5rem; color: var(--color-plum); margin-bottom: 1.25rem;">
+          Frequently Explored Mumbai Transit Corridors
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <h4 style="color: var(--color-plum);">Dadar West Station</h4>
+              <span class="signal-badge comfortable"><span class="signal-dot"></span>Comfortable</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Active floral market, well-lit auto stands, constant passenger volume until late.</p>
+          </div>
+
+          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <h4 style="color: var(--color-plum);">BKC Financial District</h4>
+              <span class="signal-badge caution"><span class="signal-dot"></span>Use Caution</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Wide corporate avenues with great lighting, but pedestrian crowds drop sharply after 9 PM.</p>
+          </div>
+
+          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <h4 style="color: var(--color-plum);">Kurla West Skywalk</h4>
+              <span class="signal-badge avoid"><span class="signal-dot"></span>Avoid Alone</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Dim sections reported on elevated walkway after dark. Prefer ground station road.</p>
+          </div>
+
+          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+              <h4 style="color: var(--color-plum);">Marine Drive Promenade</h4>
+              <span class="signal-badge comfortable"><span class="signal-dot"></span>Comfortable</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Open sea promenade, continuous foot traffic, regular police beat marshal patrols.</p>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN 2: MAP & DISCOVERY SCREEN
+         ====================================================================== -->
+    <section class="screen-view" id="screen-map" style="display: none;">
+      <div class="map-container-wrap">
+        <!-- Leaflet Map Element -->
+        <div id="mumbai-map" role="region" aria-label="Interactive Safety Map of Mumbai"></div>
+
+        <!-- Floating Search & Filters Header -->
+        <div class="map-floating-controls">
+          <div class="map-search-bar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-plum)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" class="map-search-input" id="map-search-input" placeholder="Search roads, stations, landmarks (e.g. Dadar, BKC, Bandra)..." aria-label="Search map locations">
+            <button class="map-search-btn" title="Search Mumbai Locations">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <!-- Filter Chips Scroll -->
+          <div class="map-floating-chips">
+            <button class="chip active" data-filter="all">All Reports</button>
+            <button class="chip" data-filter="after_dark">🌙 After Dark</button>
+            <button class="chip" data-filter="evening">🌆 Evening</button>
+            <button class="chip" data-filter="morning">🌅 Morning</button>
+            <button class="chip" data-filter="near_transit">🚆 Near Transit</button>
+            <button class="chip" data-filter="good_lighting">💡 Good Lighting</button>
+            <button class="chip" data-filter="busy_area">👥 Busy Area</button>
+            <button class="chip" data-filter="low_visibility">🌫 Low Visibility</button>
+            <button class="chip" data-filter="harassment_concern">⚠ Needs Caution</button>
+          </div>
+        </div>
+
+        <!-- Floating Safety Summary Card (Populated when user clicks a pin) -->
+        <div class="map-safety-summary-card" id="map-safety-card" style="display: none;">
+          <!-- Content dynamically rendered by map.js -->
+        </div>
+
+        <!-- Desktop Map Legend -->
+        <div class="map-legend">
+          <div class="legend-item">
+            <span class="signal-dot" style="background-color: var(--signal-comfortable);"></span>
+            <span>Comfortable</span>
+          </div>
+          <div class="legend-item">
+            <span class="signal-dot" style="background-color: var(--signal-caution);"></span>
+            <span>Use Caution</span>
+          </div>
+          <div class="legend-item">
+            <span class="signal-dot" style="background-color: var(--signal-avoid);"></span>
+            <span>Avoid Alone</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN 3: ROUTE COMPARISON SCREEN ("Plan My Route")
+         ====================================================================== -->
+    <section class="screen-view" id="screen-route" style="display: none;">
+      <div class="route-screen-wrap">
+        <div class="section-header" style="text-align: left; margin-bottom: 2rem;">
+          <span class="hero-pill" style="margin-bottom: 0.5rem;">Intelligent Route Guidance</span>
+          <h2>Plan My Route with Community Context</h2>
+          <p>Compare multiple route choices before travelling. See verified community signals, lighting indicators, and practical caution notes.</p>
+        </div>
+
+        <!-- Route Planner Form -->
+        <div class="route-form-card">
+          <form id="route-plan-form">
+            <div class="route-input-grid">
+              <div class="form-group">
+                <label class="form-label" for="route-origin">Starting Location</label>
+                <input type="text" class="form-input" id="route-origin" value="Dadar Station" placeholder="e.g. Dadar Station, Bandra West, Andheri East" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="route-destination">Destination</label>
+                <input type="text" class="form-input" id="route-destination" value="Shivaji Park" placeholder="e.g. Shivaji Park, Carter Road, MIDC" required>
+              </div>
+            </div>
+
+            <!-- Popular Quick Presets -->
+            <div style="margin-bottom: 1.5rem;">
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum);">Try Frequent Routes:</span>
+              <div class="travel-presets-row">
+                <button type="button" class="preset-chip" data-from="Dadar Station" data-to="Shivaji Park">Dadar Station → Shivaji Park</button>
+                <button type="button" class="preset-chip" data-from="Bandra Station West" data-to="Carter Road Promenade">Bandra West → Carter Road</button>
+                <button type="button" class="preset-chip" data-from="Andheri Station East" data-to="MIDC Business District">Andheri Station → MIDC District</button>
+              </div>
+            </div>
+
+            <!-- Time of Day & Travel Mode Selection -->
+            <div class="route-input-grid">
+              <div class="form-group">
+                <label class="form-label">When are you travelling?</label>
+                <div class="chips-scroll" style="padding: 0;">
+                  <button type="button" class="chip route-time-chip" data-time="morning">Morning (6am-12pm)</button>
+                  <button type="button" class="chip route-time-chip" data-time="afternoon">Afternoon (12pm-5pm)</button>
+                  <button type="button" class="chip route-time-chip active" data-time="evening">Evening (5pm-9pm)</button>
+                  <button type="button" class="chip route-time-chip" data-time="after_dark">After Dark (9pm-6am)</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Travel Mode</label>
+                <div class="mode-selector-grid">
+                  <button type="button" class="mode-btn active" data-mode="walk">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="5" r="2"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/></svg>
+                    Walk
+                  </button>
+                  <button type="button" class="mode-btn" data-mode="public_transit">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><path d="m8 19-2 3"/><path d="m16 19 2 3"/></svg>
+                    Transit
+                  </button>
+                  <button type="button" class="mode-btn" data-mode="cab_auto">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H8.5a1 1 0 0 0-.8.4L5 11l-5.16.86a1 1 0 0 0-.84.99V16h3"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+                    Auto/Cab
+                  </button>
+                  <button type="button" class="mode-btn" data-mode="bike">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5L9 9l3-3 2 3h4"/></svg>
+                    Bike
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top: 0.5rem;">
+              Compare Safety Guidance for These Routes
+            </button>
+          </form>
+        </div>
+
+        <!-- Route Comparison Results Container -->
+        <div id="route-results">
+          <!-- Dynamically populated by route-planner.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN 4: SUBMIT ANONYMOUS REVIEW SCREEN
+         ====================================================================== -->
+    <section class="screen-view" id="screen-review" style="display: none;">
+      <div class="review-screen-wrap">
+        <div class="section-header" style="text-align: left; margin-bottom: 2rem;">
+          <span class="hero-pill" style="margin-bottom: 0.5rem;">Anonymous • Safe • Helpful</span>
+          <h2>Share an Anonymous Safety Experience</h2>
+          <p>Your honest context helps another woman choose a safer road or entrance. No personal names or live location tracking.</p>
+        </div>
+
+        <div class="review-form-card" id="review-form-container">
+          <form id="anonymous-review-form">
+            <!-- 1. Location Selection -->
+            <div class="form-group">
+              <label class="form-label" for="rev-location-select">
+                Road, Area, Landmark, or Transit Station <span class="required">*</span>
+              </label>
+              <select class="form-select" id="rev-location-select" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <!-- Custom Location Fallback Input -->
+            <div class="form-group" id="rev-custom-location-wrap" style="display: none;">
+              <label class="form-label" for="rev-custom-location">
+                Specify Mumbai Road or Landmark Name <span class="required">*</span>
+              </label>
+              <input type="text" class="form-input" id="rev-custom-location" placeholder="e.g. Bandra Talao Lane, Kurla Phoenix Road">
+              <span class="form-hint">Must be a public road, station, or landmark — never private residences.</span>
+            </div>
+
+            <!-- Date & Time of Experience -->
+            <div class="route-input-grid">
+              <div class="form-group">
+                <label class="form-label" for="rev-date">Date of Experience <span class="required">*</span></label>
+                <input type="date" class="form-input" id="rev-date" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Time of Day <span class="required">*</span></label>
+                <div class="observation-grid" style="grid-template-columns: repeat(2, 1fr);">
+                  <button type="button" class="obs-btn obs-time" data-value="morning">🌅 Morning<br><small>6am - 12pm</small></button>
+                  <button type="button" class="obs-btn obs-time" data-value="afternoon">☀️ Afternoon<br><small>12pm - 5pm</small></button>
+                  <button type="button" class="obs-btn obs-time selected" data-value="evening">🌆 Evening<br><small>5pm - 9pm</small></button>
+                  <button type="button" class="obs-btn obs-time" data-value="after_dark">🌙 After Dark<br><small>9pm - 6am</small></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Travel Mode -->
+            <div class="form-group">
+              <label class="form-label">How did you travel here?</label>
+              <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <button type="button" class="obs-btn obs-mode selected" data-value="walk">Walking</button>
+                <button type="button" class="obs-btn obs-mode" data-value="public_transit">Train/Metro</button>
+                <button type="button" class="obs-btn obs-mode" data-value="cab_auto">Cab/Auto</button>
+                <button type="button" class="obs-btn obs-mode" data-value="bike">Two-Wheeler</button>
+              </div>
+            </div>
+
+            <!-- Overall Feeling -->
+            <div class="form-group">
+              <label class="form-label">Overall Feeling of Comfort <span class="required">*</span></label>
+              <div class="observation-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button type="button" class="obs-btn obs-feeling selected" data-value="comfortable" style="border-color: var(--signal-comfortable-border);">
+                  <span style="color: var(--signal-comfortable); font-weight: 800;">● Comfortable</span>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Active & illuminated</small>
+                </button>
+                <button type="button" class="obs-btn obs-feeling" data-value="use_caution" style="border-color: var(--signal-caution-border);">
+                  <span style="color: var(--signal-caution); font-weight: 800;">● Use Caution</span>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Lower crowd or dim</small>
+                </button>
+                <button type="button" class="obs-btn obs-feeling" data-value="avoid_alone" style="border-color: var(--signal-avoid-border);">
+                  <span style="color: var(--signal-avoid); font-weight: 800;">● Avoid Alone</span>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">Isolated or unsafe</small>
+                </button>
+              </div>
+            </div>
+
+            <!-- What did you notice? Textarea -->
+            <div class="form-group">
+              <label class="form-label" for="rev-experience">
+                What did you notice? <span class="required">*</span>
+              </label>
+              <textarea class="form-textarea" id="rev-experience" placeholder="Describe the atmosphere, street lighting, pedestrian flow, or any caution points..." required></textarea>
+              <span class="form-hint">Be factual and calm. Avoid personal names, phone numbers, or private addresses.</span>
+            </div>
+
+            <!-- Live PII Scanner Alert -->
+            <div class="pii-live-preview-box" id="pii-preview-box">
+              <div style="font-weight: 700; color: #856404; font-size: 0.85rem;">
+                Privacy Guardian Notice:
+              </div>
+              <p style="font-size: 0.8rem; color: #856404; margin-top: 0.2rem;">
+                Our privacy system detected potentially identifying terms in your draft. These will be automatically masked (e.g. [REDACTED PHONE]) before moderation to protect your safety and anonymity.
+              </p>
+              <div class="pii-tags-row" id="pii-detected-tags"></div>
+            </div>
+
+            <!-- Structured Observations -->
+            <div style="margin: 1.5rem 0; padding: 1.25rem; background: var(--bg-app); border-radius: var(--radius-md);">
+              <h3 style="font-size: 1.05rem; color: var(--color-plum); margin-bottom: 1rem;">Structured Observations</h3>
+
+              <div class="form-group">
+                <label class="form-label">Lighting Condition</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-lighting selected" data-value="well_lit">Well-Lit</button>
+                  <button type="button" class="obs-btn obs-lighting" data-value="moderate">Moderate</button>
+                  <button type="button" class="obs-btn obs-lighting" data-value="dim">Dim</button>
+                  <button type="button" class="obs-btn obs-lighting" data-value="pitch_dark">Dark / Broken</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Foot Traffic & Pedestrian Crowds</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-foot-traffic" data-value="crowded">Crowded</button>
+                  <button type="button" class="obs-btn obs-foot-traffic selected" data-value="active">Active</button>
+                  <button type="button" class="obs-btn obs-foot-traffic" data-value="quiet">Quiet</button>
+                  <button type="button" class="obs-btn obs-foot-traffic" data-value="deserted">Deserted</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Nearby Open Shops & Businesses</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-shops" data-value="many">Many Open</button>
+                  <button type="button" class="obs-btn obs-shops selected" data-value="some">Some Open</button>
+                  <button type="button" class="obs-btn obs-shops" data-value="few">Few</button>
+                  <button type="button" class="obs-btn obs-shops" data-value="none">All Shut</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Public Transport Access</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-transit" data-value="direct">At Station</button>
+                  <button type="button" class="obs-btn obs-transit selected" data-value="short_walk">&lt; 5m Walk</button>
+                  <button type="button" class="obs-btn obs-transit" data-value="far">&gt; 10m Walk</button>
+                  <button type="button" class="obs-btn obs-transit" data-value="none">None</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Security or Police Presence</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-security" data-value="police_booth">Police Booth</button>
+                  <button type="button" class="obs-btn obs-security selected" data-value="occasional_patrol">Patrol</button>
+                  <button type="button" class="obs-btn obs-security" data-value="private_guards">Guards</button>
+                  <button type="button" class="obs-btn obs-security" data-value="none">None</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Road & Footpath Condition</label>
+                <div class="observation-grid" style="grid-template-columns: repeat(4, 1fr);">
+                  <button type="button" class="obs-btn obs-road" data-value="wide_footpath">Wide Footpath</button>
+                  <button type="button" class="obs-btn obs-road selected" data-value="paved">Paved Road</button>
+                  <button type="button" class="obs-btn obs-road" data-value="broken">Broken Pavement</button>
+                  <button type="button" class="obs-btn obs-road" data-value="construction">Construction</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Specific Safety Concerns -->
+            <div class="form-group">
+              <label class="form-label">Specific Concerns (Select if observed)</label>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem;">
+                <label class="checkbox-card">
+                  <input type="checkbox" id="concern-harassment">
+                  <div>
+                    <div class="checkbox-label">Catcalling, loitering groups, or harassment concern</div>
+                    <div class="checkbox-desc">Uncomfortable crowding or verbal remarks noticed</div>
+                  </div>
+                </label>
+                <label class="checkbox-card">
+                  <input type="checkbox" id="concern-stalking">
+                  <div>
+                    <div class="checkbox-label">Stalking or following concern</div>
+                    <div class="checkbox-desc">Suspicious following or persistent loitering</div>
+                  </div>
+                </label>
+                <label class="checkbox-card">
+                  <input type="checkbox" id="concern-isolated">
+                  <div>
+                    <div class="checkbox-label">Isolated stretch or blind spots</div>
+                    <div class="checkbox-desc">High compound walls, dark corners, or lack of escape paths</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Advice for Another Woman -->
+            <div class="form-group">
+              <label class="form-label" for="rev-advice">
+                Practical advice for another woman travelling here
+              </label>
+              <input type="text" class="form-input" id="rev-advice" placeholder="e.g. Take the station-side exit; avoid the dark alley near the bridge pillar.">
+              <span class="form-hint">Actionable tips make travel easier for everyone.</span>
+            </div>
+
+            <!-- Optional Privacy-Safe Photo -->
+            <div class="form-group">
+              <label class="form-label" for="rev-photo-input">
+                Optional Photo of Street / Lighting Condition
+              </label>
+              <input type="file" class="form-input" id="rev-photo-input" accept="image/*">
+              <span class="form-hint">All GPS location metadata is automatically scrubbed. Ensure no faces or vehicle plates are visible.</span>
+              <img id="rev-photo-preview" alt="Privacy-safe photo preview" style="display: none; max-width: 100%; height: 180px; object-fit: cover; border-radius: var(--radius-md); margin-top: 0.5rem; border: 1px solid var(--border-medium);">
+            </div>
+
+            <!-- Required Confirmation Checkbox -->
+            <div class="form-group" style="margin-top: 1.5rem;">
+              <label class="checkbox-card" style="border: 1.5px solid var(--color-plum);">
+                <input type="checkbox" id="rev-confirm-no-pii" required>
+                <div>
+                  <div class="checkbox-label" style="color: var(--color-plum);">
+                    Mandatory Privacy Confirmation <span class="required">*</span>
+                  </div>
+                  <div class="checkbox-desc" style="color: var(--text-main); font-weight: 500;">
+                    “I confirm that this report does not include names, home addresses, phone numbers, exact routines, identifying photographs, or personal information.”
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div class="alert-box info" style="margin-top: 1rem;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <div>
+                <strong>Community Review Queue:</strong> All submissions enter a brief peer moderation review before going live to prevent doxxing, false claims, and privacy leaks.
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-full" id="btn-submit-review" style="margin-top: 1.25rem;">
+              Submit Anonymous Review
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN 5: SAFETY GUIDELINES, PRIVACY & URGENT HELP
+         ====================================================================== -->
+    <section class="screen-view" id="screen-guidelines" style="display: none;">
+      <div class="guidelines-wrap">
+        <!-- Urgent Help Banner -->
+        <div class="urgent-help-banner">
+          <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h2>Urgent Help & Verified Mumbai Helplines</h2>
+          </div>
+          <p>
+            <strong>Important:</strong> SafeStreets is a community context platform and <strong>NOT</strong> an emergency dispatch service. If you feel unsafe or are in immediate danger, please reach out directly to verified emergency numbers.
+          </p>
+
+          <div class="emergency-helpline-grid" id="urgent-helplines-grid">
+            <!-- Dynamically populated by emergency.js -->
+          </div>
+        </div>
+
+        <!-- Privacy & Contributor Self-Deletion Section -->
+        <div class="card" style="margin-bottom: 2rem;">
+          <h3 style="color: var(--color-plum); font-size: 1.3rem; margin-bottom: 0.75rem;">
+            Check or Delete Your Submitted Report
+          </h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Did you submit a review earlier? Enter your private anonymous token below to check its moderation status or permanently withdraw it.
+          </p>
+          <form id="lookup-token-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <input type="text" class="form-input" id="lookup-token-input" placeholder="e.g. sst-anon-9f2b84..." style="flex: 1; min-width: 240px;" required>
+            <button type="submit" class="btn btn-primary">Lookup Report</button>
+          </form>
+          <div id="lookup-token-result"></div>
+        </div>
+
+        <!-- Privacy Manifesto -->
+        <div class="card" style="margin-bottom: 2rem;">
+          <h3 style="color: var(--color-plum); font-size: 1.3rem; margin-bottom: 1rem;">
+            Our Privacy & Safety Manifesto
+          </h3>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem; color: var(--text-main); font-size: 0.95rem;">
+            <li style="display: flex; gap: 0.75rem;">
+              <span style="color: var(--signal-comfortable); font-weight: 800;">✓</span>
+              <div><strong>Anonymous by Default:</strong> We never display contributor names, IP addresses, or social accounts.</div>
+            </li>
+            <li style="display: flex; gap: 0.75rem;">
+              <span style="color: var(--signal-comfortable); font-weight: 800;">✓</span>
+              <div><strong>Automated PII Redaction:</strong> Phone numbers, email addresses, vehicle plates, and private residence mentions are automatically stripped.</div>
+            </li>
+            <li style="display: flex; gap: 0.75rem;">
+              <span style="color: var(--signal-comfortable); font-weight: 800;">✓</span>
+              <div><strong>No Live Location Tracking:</strong> We never request or log your persistent background GPS coordinates.</div>
+            </li>
+            <li style="display: flex; gap: 0.75rem;">
+              <span style="color: var(--signal-comfortable); font-weight: 800;">✓</span>
+              <div><strong>Aggregated Nuance:</strong> No area is permanently labeled unsafe based on a single review. We aggregate recent time-specific observations.</div>
+            </li>
+            <li style="display: flex; gap: 0.75rem;">
+              <span style="color: var(--signal-comfortable); font-weight: 800;">✓</span>
+              <div><strong>Non-Alarmist Tone:</strong> We reject fear-mongering and victim-blaming language. The focus is practical, respectful empowerment.</div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Report Inaccurate / Harmful Content Form -->
+        <div class="card">
+          <h3 style="color: var(--color-plum); font-size: 1.3rem; margin-bottom: 0.75rem;">
+            Report Harmful or Misleading Content
+          </h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Notice a review that contains private information, inaccurate allegations, or abusive language? Alert our moderators immediately.
+          </p>
+          <form id="report-content-form">
+            <input type="hidden" id="flag-target-type" value="review">
+            <input type="hidden" id="flag-target-id" value="1">
+
+            <div class="route-input-grid">
+              <div class="form-group">
+                <label class="form-label" for="flag-reason">Reason for Report</label>
+                <select class="form-select" id="flag-reason" required>
+                  <option value="pii_leak">Contains personal phone/address/name</option>
+                  <option value="private_residence">Refers to a private home rather than public area</option>
+                  <option value="inaccurate">Factually misleading or outdated</option>
+                  <option value="inappropriate">Abusive, harassing, or spam</option>
+                  <option value="other">Other concern</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="flag-details">Explanation</label>
+                <input type="text" class="form-input" id="flag-details" placeholder="Briefly describe what needs correction..." required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-outline" style="color: var(--signal-avoid); border-color: var(--signal-avoid-border);">
+              Submit Community Content Alert
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SCREEN 6: MODERATOR DASHBOARD (PROTECTED)
+         ====================================================================== -->
+    <section class="screen-view" id="screen-moderator" style="display: none;">
+      <div class="mod-screen-wrap">
+        <!-- Unauthenticated Login View -->
+        <div id="mod-login-section">
+          <div class="card" style="max-width: 440px; margin: 3rem auto; padding: 2.25rem;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <div class="logo-badge" style="margin: 0 auto 0.75rem;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <h2 style="font-size: 1.5rem; color: var(--color-plum);">Moderator Portal</h2>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                Protected access for SafeStreets safety reviewers
+              </p>
+            </div>
+
+            <div class="alert-box danger" id="mod-login-error" style="display: none;"></div>
+
+            <form id="mod-login-form">
+              <div class="form-group">
+                <label class="form-label" for="mod-username">Username</label>
+                <input type="text" class="form-input" id="mod-username" value="moderator" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="mod-password">Password</label>
+                <input type="password" class="form-input" id="mod-password" value="safestreets2026" required>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-full" style="margin-top: 0.5rem;">
+                Login to Review Queue
+              </button>
+            </form>
+
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 1.25rem; background: var(--bg-app); padding: 0.5rem; border-radius: var(--radius-sm);">
+              Demo credentials prefilled (user: <strong>moderator</strong> / pass: <strong>safestreets2026</strong>)
+            </div>
+          </div>
+        </div>
+
+        <!-- Authenticated Dashboard View -->
+        <div id="mod-dashboard-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2 style="font-size: 1.7rem; color: var(--color-plum);">Safety Moderation Queue</h2>
+              <p style="font-size: 0.9rem; color: var(--text-muted);">
+                Verify reports, ensure PII privacy, and monitor community signals
+              </p>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="SafeStreetsMod.handleModLogout()">
+              Logout
+            </button>
+          </div>
+
+          <!-- Mod Navigation Tabs -->
+          <div class="mod-tabs-nav">
+            <button class="mod-tab-btn active" data-tab="pending">
+              Pending Reviews <span class="badge" id="mod-pending-badge">0</span>
+            </button>
+            <button class="mod-tab-btn" data-tab="flags">
+              Reported Content & Flags
+            </button>
+            <button class="mod-tab-btn" data-tab="audit">
+              Moderator Audit Log
+            </button>
+            <button class="mod-tab-btn" data-tab="settings">
+              Admin & Helpline Settings
+            </button>
+          </div>
+
+          <!-- Tab Pane: Pending Reviews -->
+          <div class="mod-tab-pane" id="mod-tab-pending">
+            <div id="mod-pending-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Tab Pane: Flags -->
+          <div class="mod-tab-pane" id="mod-tab-flags" style="display: none;">
+            <div id="mod-flags-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Tab Pane: Audit Log -->
+          <div class="mod-tab-pane" id="mod-tab-audit" style="display: none;">
+            <div class="card">
+              <div id="mod-audit-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Pane: Admin Settings -->
+          <div class="mod-tab-pane" id="mod-tab-settings" style="display: none;">
+            <div class="card" style="max-width: 650px;">
+              <h3 style="color: var(--color-plum); font-size: 1.25rem; margin-bottom: 1rem;">
+                Platform & Moderation Rules Configuration
+              </h3>
+              <form id="mod-settings-form">
+                <div class="form-group">
+                  <label class="checkbox-card">
+                    <input type="checkbox" id="setting-autohold" checked>
+                    <div>
+                      <div class="checkbox-label">Auto-hold reviews with detected PII</div>
+                      <div class="checkbox-desc">Require human review before publishing any report where phone numbers, plates, or addresses were identified.</div>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="setting-min-reviews">
+                    Minimum reviews needed to calculate dynamic safety signal
+                  </label>
+                  <input type="number" class="form-input" id="setting-min-reviews" value="2" min="1" max="10">
+                  <span class="form-hint">Prevents an area from being labeled permanently based on a single review.</span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="setting-city">Active City</label>
+                  <select class="form-select" id="setting-city">
+                    <option value="Mumbai">Mumbai (Active)</option>
+                    <option value="Pune" disabled>Pune (Architecture Ready)</option>
+                    <option value="Bengaluru" disabled>Bengaluru (Architecture Ready)</option>
+                  </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+                  Save Settings
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       MODALS
+       ====================================================================== -->
+
+  <!-- 1. Urgent Help Modal -->
+  <div class="modal-overlay" id="urgent-help-modal" role="dialog" aria-modal="true" aria-labelledby="urgent-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="urgent-modal-title" style="color: var(--signal-avoid); display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Urgent Help & Mumbai Emergency Helplines
+        </h3>
+        <button class="modal-close-btn" onclick="SafeStreetsEmergency.closeUrgentHelpModal()" title="Close">&times;</button>
+      </div>
+
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        SafeStreets is a community context map, <strong>not an emergency service</strong>. If you are in distress or feel unsafe right now, tap to call verified emergency responders immediately:
+      </p>
+
+      <div class="emergency-helpline-grid" id="modal-urgent-helplines-grid">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: right;">
+        <button class="btn btn-outline btn-sm" onclick="SafeStreetsEmergency.closeUrgentHelpModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Location Detail Modal -->
+  <div class="modal-overlay" id="location-detail-modal" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <span class="hero-pill">Location Safety Drill-Down</span>
+        <button class="modal-close-btn" onclick="SafeStreetsApp.closeLocationModal()" title="Close">&times;</button>
+      </div>
+      <div id="location-modal-body">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Report Content / Flag Modal -->
+  <div class="modal-overlay" id="flag-modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="color: var(--color-plum);">Report This Review</h3>
+        <button class="modal-close-btn" onclick="SafeStreetsApp.closeFlagModal()" title="Close">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Help keep SafeStreets private, respectful, and accurate. Why are you reporting this review?
+      </p>
+      <form onsubmit="SafeStreetsApp.handleReportContentSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Select Issue</label>
+          <select class="form-select" id="flag-modal-reason" required>
+            <option value="pii_leak">Contains personal phone numbers, names, or addresses</option>
+            <option value="private_residence">Refers to a private home</option>
+            <option value="inappropriate">Abusive language or spam</option>
+            <option value="inaccurate">Inaccurate / misleading information</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Additional context</label>
+          <input type="text" class="form-input" id="flag-modal-details" placeholder="Brief detail..." required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+          <button type="button" class="btn btn-outline" onclick="SafeStreetsApp.closeFlagModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-bottom-bar" role="navigation" aria-label="Mobile Navigation">
+    <button class="mobile-nav-item active" data-navigate="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+      <span>Map</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="route">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H12"/></svg>
+      <span>Routes</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="review">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Review</span>
+    </button>
+    <button class="mobile-nav-item" onclick="SafeStreetsEmergency.openUrgentHelpModal()" style="color: var(--signal-avoid);">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke="var(--signal-avoid)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <span>SOS</span>
+    </button>
+  </nav>
+
+  <!-- App Footer -->
+  <footer class="app-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="logo-title" style="color: #FFFFFF; font-size: 1.4rem; margin-bottom: 0.5rem;">SafeStreets Mumbai</div>
+        <p>A women-led community safety map designed to provide honest, time-specific experiences of Mumbai's roads, transit stations, and public corridors.</p>
+        <p style="margin-top: 0.75rem; font-size: 0.8rem; color: #D6C7D1;">
+          <em>Notice: Community safety information provides context and cannot guarantee safety. Trust your instinct and use emergency services when needed.</em>
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navigation</h4>
+        <ul>
+          <li><a data-navigate="home" href="#home">Home</a></li>
+          <li><a data-navigate="map" href="#map">Explore Mumbai Map</a></li>
+          <li><a data-navigate="route" href="#route">Plan My Route</a></li>
+          <li><a data-navigate="review" href="#review">Share a Review</a></li>
+          <li><a data-navigate="guidelines" href="#guidelines">Safety & Privacy</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Emergency Numbers</h4>
+        <ul>
+          <li><a href="tel:103">Mumbai Police Women: 103</a></li>
+          <li><a href="tel:112">National Emergency: 112</a></li>
+          <li><a href="tel:1512">Railway Police: 1512</a></li>
+          <li><a href="tel:100">Police Control: 100</a></li>
+          <li><a href="tel:108">Ambulance: 108</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Trust & Governance</h4>
+        <ul>
+          <li><button onclick="SafeStreetsApp.navigate('guidelines')">Privacy Manifesto</button></li>
+          <li><button onclick="SafeStreetsApp.navigate('guidelines')">Withdraw Submitted Report</button></li>
+          <li><button onclick="SafeStreetsApp.navigate('guidelines')">Report Content</button></li>
+          <li><button onclick="SafeStreetsApp.navigate('moderator')">Moderator Portal</button></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 SafeStreets Mumbai. Built by and for the women of Mumbai.</div>
+      <div>Designed with respect, privacy, and community solidarity.</div>
+    </div>
+  </footer>
+
+  <!-- Mobile Bottom Navigation Bar (First-Class Android & iOS Safari Ergonomics) -->
+  <nav class="mobile-bottom-bar" role="navigation" aria-label="Mobile Bottom Navigation">
+    <button class="mobile-nav-item active" data-navigate="home" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span>Home</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="map" aria-label="Explore Map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+        <line x1="8" y1="2" x2="8" y2="18"/>
+        <line x1="16" y1="6" x2="16" y2="22"/>
+      </svg>
+      <span>Map</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="route" aria-label="Plan Safe Route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="6" cy="19" r="3"/>
+        <path d="M9 19h8.5a4.5 4.5 0 0 0 0-9H10"/>
+        <circle cx="18" cy="5" r="3"/>
+      </svg>
+      <span>Route</span>
+    </button>
+    <button class="mobile-nav-item" data-navigate="review" aria-label="Share Review">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      <span>Review</span>
+    </button>
+    <button class="mobile-nav-item mobile-sos" onclick="SafeStreetsEmergency.openUrgentHelpModal()" aria-label="Emergency SOS">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+      <span>SOS 103</span>
+    </button>
+  </nav>
+
+  <!-- Floating PWA & Android Install Banner -->
+  <div class="pwa-install-banner" id="pwa-install-banner" role="dialog" aria-label="Install App">
+    <div class="pwa-banner-content">
+      <div class="pwa-banner-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+      </div>
+      <div class="pwa-banner-text">
+        <h4>SafeStreets Mumbai</h4>
+        <p>Install for instant offline map & 1-tap emergency dialer</p>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button class="btn-banner-install" onclick="installSafeStreetsApp()">Install App</button>
+      <button class="btn-banner-dismiss" onclick="dismissInstallBanner()" aria-label="Dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- App JS Modules -->
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/route-planner.js"></script>
+  <script src="js/review-form.js"></script>
+  <script src="js/emergency.js"></script>
+  <script src="js/moderator.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- PWA Service Worker & Install Handler -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('[SafeStreets] PWA Service Worker active:', reg.scope))
+          .catch(err => console.warn('[SafeStreets] SW Registration:', err));
+      });
+    }
+
+    // Offline status detection
+    function updateOnlineStatus() {
+      const banner = document.getElementById('offline-banner');
+      if (banner) {
+        banner.style.display = navigator.onLine ? 'none' : 'block';
+      }
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    // PWA & Android Install Prompt Handling
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!localStorage.getItem('safestreets_pwa_dismissed')) {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.style.display = 'flex';
+      }
+      const installBtns = document.querySelectorAll('.btn-install-android');
+      installBtns.forEach(b => b.style.display = 'inline-flex');
+    });
+
+    function installSafeStreetsApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            SafeStreetsApp.showToast('SafeStreets added to your device Home Screen!');
+            dismissInstallBanner();
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        // Fallback guidance for iOS Safari and Android Chrome
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+          alert('To install on iPhone/Safari: Tap the Share button at the bottom of Safari (square with arrow pointing up), scroll down, and select "Add to Home Screen".');
+        } else {
+          alert('To install on Android: Tap the menu (⋮) at top-right of Chrome, and choose "Install app" or "Add to Home screen".');
+        }
+      }
+    }
+
+    function dismissInstallBanner() {
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'none';
+      localStorage.setItem('safestreets_pwa_dismissed', 'true');
+    }
+  </script>
+</body>
+</html>

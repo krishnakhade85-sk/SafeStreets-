@@ -1,0 +1,54 @@
+{
+  "name": "SafeStreets Mumbai - Women Safety & Route Guide",
+  "short_name": "SafeStreets",
+  "description": "Women-led community safety map, night-travel guidance, and urgent helplines for Mumbai.",
+  "start_url": "/?source=pwa",
+  "id": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0B0414",
+  "theme_color": "#150826",
+  "categories": ["navigation", "travel", "social"],
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explore Mumbai Map",
+      "short_name": "Map",
+      "url": "/#map",
+      "description": "View live community safety signals across Mumbai"
+    },
+    {
+      "name": "Plan Safe Route",
+      "short_name": "Route",
+      "url": "/#route",
+      "description": "Compare safety guidance between two points"
+    },
+    {
+      "name": "Share Review",
+      "short_name": "Review",
+      "url": "/#review",
+      "description": "Submit an anonymous road review"
+    },
+    {
+      "name": "SOS Helplines 103",
+      "short_name": "Urgent SOS",
+      "url": "/#guidelines",
+      "description": "Mumbai Women Helpline 103 and 112"
+    }
+  ]
+}

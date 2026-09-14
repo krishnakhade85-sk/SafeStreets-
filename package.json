@@ -1,0 +1,19 @@
+{
+  "name": "safestreets-mumbai",
+  "version": "1.0.0",
+  "description": "SafeStreets Mumbai - Women-led community safety map and route guidance platform",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test test/suite.test.js"
+  },
+  "keywords": [
+    "safestreets",
+    "mumbai",
+    "safety",
+    "community-map",
+    "women-safety"
+  ],
+  "author": "Google DeepMind pair programming with User",
+  "license": "MIT"
+}

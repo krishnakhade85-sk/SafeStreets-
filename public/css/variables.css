@@ -1,0 +1,92 @@
+/**
+ * SafeStreets Mumbai - Design Tokens & Purple Textured Color Palette
+ * Designed for High-Contrast Accessibility, Mobile Ergonomics, and Luxurious Velvet Amethyst Texture.
+ */
+
+:root {
+  /* Core Purple Brand Tokens */
+  --color-plum: #7C3AED;
+  --color-plum-dark: #5B21B6;
+  --color-plum-light: #8B5CF6;
+  --color-plum-subtle: rgba(139, 92, 246, 0.14);
+  --color-plum-glow: rgba(168, 85, 247, 0.35);
+
+  --color-pink: #C084FC;
+  --color-pink-hover: #D8B4FE;
+  --color-pink-soft: rgba(192, 132, 252, 0.15);
+  --color-pink-border: rgba(192, 132, 252, 0.3);
+
+  /* Deep Texture Canvas Accents */
+  --purple-canvas-deep: #0B0414;
+  --purple-canvas-mid: #150826;
+  --purple-canvas-surface: #1E0B36;
+  --purple-canvas-card: rgba(28, 12, 48, 0.78);
+  --purple-glow-primary: rgba(147, 51, 234, 0.25);
+  --purple-glow-secondary: rgba(192, 132, 252, 0.18);
+
+  /* Community Signals (Calibrated for high contrast on purple) */
+  --signal-comfortable: #10B981;
+  --signal-comfortable-bg: rgba(16, 185, 129, 0.16);
+  --signal-comfortable-border: rgba(16, 185, 129, 0.35);
+  --signal-comfortable-text: #34D399;
+
+  --signal-caution: #F59E0B;
+  --signal-caution-bg: rgba(245, 158, 11, 0.16);
+  --signal-caution-border: rgba(245, 158, 11, 0.35);
+  --signal-caution-text: #FBBF24;
+
+  --signal-avoid: #F43F5E;
+  --signal-avoid-bg: rgba(244, 63, 94, 0.18);
+  --signal-avoid-border: rgba(244, 63, 94, 0.38);
+  --signal-avoid-text: #FB7185;
+
+  /* Neutrals & Surfaces */
+  --bg-app: #0B0414;
+  --bg-card: rgba(28, 12, 48, 0.82);
+  --bg-card-muted: rgba(38, 16, 64, 0.65);
+  --bg-hover: rgba(62, 25, 102, 0.5);
+
+  --border-light: rgba(192, 132, 252, 0.15);
+  --border-medium: rgba(192, 132, 252, 0.28);
+  --border-focus: #A855F7;
+
+  --text-main: #FFFFFF;
+  --text-muted: #D1C4E9;
+  --text-light: #A79BBF;
+  --text-inverse: #0B0414;
+
+  /* Typography */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Elevation Shadows with Violet Ambiance */
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35), 0 0 1px rgba(192, 132, 252, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(147, 51, 234, 0.18);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(168, 85, 247, 0.22);
+  --shadow-floating: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 36px rgba(168, 85, 247, 0.3);
+
+  /* Radii */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* Layout & Mobile Ergonomics */
+  --nav-height-desktop: 72px;
+  --nav-height-mobile: 68px;
+  --max-content-width: 1200px;
+
+  /* Safe Area Insets for iOS Safari & Android Gestures */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Procedural Micro-Texture Pattern (Tactile SVG noise) */
+  --purple-texture-bg: 
+    radial-gradient(ellipse at top right, rgba(168, 85, 247, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom left, rgba(124, 58, 237, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 50% 30%, rgba(192, 132, 252, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #130722 0%, #0B0414 100%);
+}
