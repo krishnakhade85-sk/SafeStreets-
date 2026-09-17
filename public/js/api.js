@@ -37,7 +37,17 @@ const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ origin, destination, time_of_day: timeOfDay, travel_mode: travelMode })
     });
-    return res.json();
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`API returned HTTP ${res.status}: ${res.statusText || 'Unable to compute route'}`);
+    }
+    if (!res.ok) {
+      throw new Error(json.error || `HTTP ${res.status}: Failed to calculate route comparison`);
+    }
+    return json;
   },
 
   // Submit Anonymous Review

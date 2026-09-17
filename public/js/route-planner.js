@@ -51,6 +51,25 @@ async function executeRouteComparison() {
 
   if (!origin || !destination) {
     SafeStreetsApp.showToast('Please enter both origin and destination in Mumbai');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = `
+        <div class="alert-box danger">
+          Please enter both a starting location and destination in Mumbai to compare route safety.
+        </div>
+      `;
+    }
+    return;
+  }
+
+  if (origin.toLowerCase() === destination.toLowerCase()) {
+    SafeStreetsApp.showToast('Starting location and destination must be different');
+    if (resultsContainer) {
+      resultsContainer.innerHTML = `
+        <div class="alert-box danger">
+          Starting location and destination cannot be the same place.
+        </div>
+      `;
+    }
     return;
   }
 
@@ -65,13 +84,16 @@ async function executeRouteComparison() {
 
   try {
     const data = await SafeStreetsAPI.compareRoutes(origin, destination, selectedTimeOfDay, selectedTravelMode);
+    if (!data || data.error) {
+      throw new Error(data?.error || 'Failed to calculate route comparison. Please try again.');
+    }
     renderRouteResults(data);
   } catch (err) {
     console.error('Route comparison error:', err);
     if (resultsContainer) {
       resultsContainer.innerHTML = `
         <div class="alert-box danger">
-          Failed to calculate route comparison. Please try again.
+          ${SafeStreetsApp.escapeHtml(err.message || 'Failed to calculate route comparison. Please try again.')}
         </div>
       `;
     }

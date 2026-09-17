@@ -72,6 +72,9 @@ function sendJson(res, statusCode, data) {
 
 // Request body reader
 function parseJsonBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return Promise.resolve(req.body);
+  }
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => {
@@ -103,9 +106,31 @@ function requireModerator(req, res) {
   return session;
 }
 
-const server = http.createServer(async (req, res) => {
-  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = parsedUrl.pathname;
+async function handleRequest(req, res) {
+  let parsedUrl;
+  let pathname = '/';
+  try {
+    const rawUrl = req.headers['x-forwarded-uri'] || req.headers['x-matched-path'] || req.url || '/';
+    parsedUrl = new URL(rawUrl, `http://${req.headers.host || 'localhost'}`);
+    pathname = parsedUrl.pathname;
+  } catch {
+    pathname = req.url || '/';
+  }
+
+  // Handle Vercel wildcard rewrite where req.query.path contains the subpaths
+  if (req.query && req.query.path) {
+    const sub = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+    pathname = '/api/' + sub;
+  }
+
+  const getParam = (key) => {
+    if (parsedUrl && parsedUrl.searchParams && parsedUrl.searchParams.has(key)) {
+      return parsedUrl.searchParams.get(key);
+    }
+    if (req.query && req.query[key]) return req.query[key];
+    return null;
+  };
+
   const method = req.method.toUpperCase();
   const clientIp = getClientIp(req);
 
@@ -160,8 +185,8 @@ const server = http.createServer(async (req, res) => {
 
     // 2. GET /api/locations
     if (method === 'GET' && pathname === '/api/locations') {
-      const filter = parsedUrl.searchParams.get('filter') || 'all';
-      const search = (parsedUrl.searchParams.get('search') || '').trim().toLowerCase();
+      const filter = getParam('filter') || 'all';
+      const search = (getParam('search') || '').trim().toLowerCase();
 
       let query = 'SELECT * FROM locations';
       const params = [];
@@ -228,7 +253,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       // Approved community reviews for this location
-      const timeFilter = parsedUrl.searchParams.get('time_of_day');
+      const timeFilter = getParam('time_of_day');
       let revQuery = `
         SELECT id, date_of_experience, time_of_day, travel_mode,
                overall_feeling, redacted_text as experience_text, advice,
@@ -486,14 +511,40 @@ const server = http.createServer(async (req, res) => {
 
     // 7. POST /api/routes/compare (Route comparison engine)
     if (method === 'POST' && pathname === '/api/routes/compare') {
-      const body = await parseJsonBody(req);
-      const comparison = compareRoutes(
-        body.origin,
-        body.destination,
-        body.time_of_day || 'evening',
-        body.travel_mode || 'walk'
-      );
-      return sendJson(res, 200, comparison);
+      let body;
+      try {
+        body = await parseJsonBody(req);
+      } catch (parseErr) {
+        return sendJson(res, 400, { error: 'Invalid JSON in request payload' });
+      }
+
+      const origin = (body.origin || body.from || body.starting_location || body.start || '').trim();
+      const destination = (body.destination || body.to || body.end || '').trim();
+
+      if (!origin || !destination) {
+        return sendJson(res, 400, {
+          error: 'Both starting location and destination are required.'
+        });
+      }
+
+      if (origin.toLowerCase() === destination.toLowerCase()) {
+        return sendJson(res, 400, {
+          error: 'Starting location and destination cannot be the same place.'
+        });
+      }
+
+      const timeInput = body.time_of_day || body.travel_time || body.travelTime || body.timeOfDay || body.time;
+      const modeInput = body.travel_mode || body.travelMode || body.mode;
+
+      try {
+        const comparison = compareRoutes(origin, destination, timeInput, modeInput);
+        return sendJson(res, 200, comparison);
+      } catch (calcErr) {
+        console.error('Route comparison calculation error:', calcErr);
+        return sendJson(res, 400, {
+          error: calcErr.message || 'Failed to calculate route comparison. Please try again.'
+        });
+      }
     }
 
     // 8. POST /api/flags (Report a review or content)
@@ -758,7 +809,9 @@ const server = http.createServer(async (req, res) => {
     console.error('Server error:', serverErr);
     sendJson(res, 500, { error: 'Internal Server Error', message: serverErr.message });
   }
-});
+}
+
+const server = http.createServer(handleRequest);
 
 const HOST = process.env.HOST || '0.0.0.0';
 
@@ -777,5 +830,6 @@ if (require.main === module) {
 
 module.exports = {
   server,
-  startServer
+  startServer,
+  handleRequest
 };

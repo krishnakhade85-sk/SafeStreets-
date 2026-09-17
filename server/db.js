@@ -2,7 +2,13 @@
  * SafeStreets Mumbai - SQLite Database Module (using Node.js v24 native node:sqlite)
  */
 
-const { DatabaseSync } = require('node:sqlite');
+let DatabaseSync;
+try {
+  DatabaseSync = require('node:sqlite').DatabaseSync;
+} catch (sqliteErr) {
+  console.warn('[SafeStreets] node:sqlite not available in this runtime:', sqliteErr.message);
+  console.warn('[SafeStreets] Route comparison for known corridors will still work. DB-dependent features will be degraded.');
+}
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -11,8 +17,26 @@ const DB_PATH = path.join(__dirname, '..', 'safestreets.db');
 let dbInstance = null;
 
 function getDb() {
+  if (!DatabaseSync) {
+    // node:sqlite not available in this runtime (e.g. Vercel running older Node)
+    // Known-corridor route comparison works without DB; DB-backed features degrade gracefully.
+    return null;
+  }
   if (!dbInstance) {
-    dbInstance = new DatabaseSync(DB_PATH);
+    let targetPath = DB_PATH;
+    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+    if (isServerless) {
+      const tmpPath = path.join('/tmp', 'safestreets.db');
+      try {
+        if (!fs.existsSync(tmpPath) && fs.existsSync(DB_PATH)) {
+          fs.copyFileSync(DB_PATH, tmpPath);
+        }
+        targetPath = tmpPath;
+      } catch (copyErr) {
+        console.warn('Could not copy db to /tmp, falling back to source path:', copyErr.message);
+      }
+    }
+    dbInstance = new DatabaseSync(targetPath);
     initSchema(dbInstance);
   }
   return dbInstance;
@@ -20,9 +44,13 @@ function getDb() {
 
 function initSchema(db) {
   // SQLite PRAGMAs for concurrency, foreign keys, and reliability
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA busy_timeout = 5000;');
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA busy_timeout = 5000;');
+  } catch (pragmaErr) {
+    console.warn('PRAGMA configuration note:', pragmaErr.message);
+  }
 
   // 1. Locations Table
   db.exec(`

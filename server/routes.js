@@ -161,28 +161,61 @@ const KNOWN_CORRIDORS = [
   }
 ];
 
+function normalizeTimeOfDay(val) {
+  const s = String(val || '').toLowerCase().trim();
+  if (['night', 'after_dark', 'after-dark', 'late', 'dark'].includes(s)) return 'after_dark';
+  if (['evening', 'eve'].includes(s)) return 'evening';
+  if (['morning', 'morn'].includes(s)) return 'morning';
+  if (['afternoon', 'noon', 'day'].includes(s)) return 'afternoon';
+  return 'evening';
+}
+
+function normalizeTravelMode(val) {
+  const s = String(val || '').toLowerCase().trim();
+  if (['walk', 'walking', 'foot'].includes(s)) return 'walk';
+  if (['public_transit', 'transit', 'train', 'metro', 'bus'].includes(s)) return 'public_transit';
+  if (['cab_auto', 'cab', 'auto', 'taxi', 'rickshaw', 'car'].includes(s)) return 'cab_auto';
+  if (['bike', 'two_wheeler', 'motorcycle', 'scooter', 'cycle'].includes(s)) return 'bike';
+  return 'walk';
+}
+
 /**
  * Compare routes between two points or find corridors matching origin/destination.
  * Dynamically synthesizes community data if points are general locations.
  */
 function compareRoutes(origin, destination, timeOfDay = 'evening', travelMode = 'walk') {
-  // Normalize strings
-  const o = (origin || '').trim().toLowerCase();
-  const d = (destination || '').trim().toLowerCase();
+  const origClean = (origin || '').trim();
+  const destClean = (destination || '').trim();
+
+  if (!origClean || !destClean) {
+    throw new Error('Both starting location and destination are required.');
+  }
+
+  if (origClean.toLowerCase() === destClean.toLowerCase()) {
+    throw new Error('Starting location and destination cannot be the same place.');
+  }
+
+  const validTime = normalizeTimeOfDay(timeOfDay);
+  const validMode = normalizeTravelMode(travelMode);
+
+  const o = origClean.toLowerCase();
+  const d = destClean.toLowerCase();
 
   // Try matching known corridors first
   const match = KNOWN_CORRIDORS.find(c => {
-    const fromMatch = o.includes(c.from.toLowerCase()) || c.from.toLowerCase().includes(o);
-    const toMatch = d.includes(c.to.toLowerCase()) || c.to.toLowerCase().includes(d);
+    const cFrom = c.from.toLowerCase();
+    const cTo = c.to.toLowerCase();
+    const fromMatch = (cFrom.includes(o) || o.includes(cFrom));
+    const toMatch = (cTo.includes(d) || d.includes(cTo));
     return fromMatch && toMatch;
   });
 
   if (match) {
-    return formatCorridorOptions(match.options, timeOfDay, travelMode, match.from, match.to);
+    return formatCorridorOptions(match.options, validTime, validMode, origClean, destClean);
   }
 
   // If not a pre-configured exact corridor, dynamically generate routes using DB locations
-  return generateDynamicRoutes(origin, destination, timeOfDay, travelMode);
+  return generateDynamicRoutes(origClean, destClean, validTime, validMode);
 }
 
 function formatCorridorOptions(options, timeOfDay, travelMode, from, to) {
@@ -281,8 +314,14 @@ function resolvePointCoords(text, dbLocations) {
 }
 
 function generateDynamicRoutes(origin, destination, timeOfDay, travelMode) {
-  const db = getDb();
-  const dbLocations = db.prepare('SELECT * FROM locations').all();
+  let dbLocations = [];
+  let db = null;
+  try {
+    db = getDb();
+    dbLocations = db.prepare('SELECT * FROM locations').all();
+  } catch (err) {
+    console.warn('[SafeStreets] DB query note during route generation:', err.message);
+  }
 
   const origPoint = resolvePointCoords(origin, dbLocations);
   const destPoint = resolvePointCoords(destination, dbLocations);
@@ -310,28 +349,32 @@ function generateDynamicRoutes(origin, destination, timeOfDay, travelMode) {
   let avgCrowdScore = 4.0;
   let harassmentCount = 0;
 
-  if (matchedLocIds.length > 0) {
-    const placeholders = matchedLocIds.map(() => '?').join(',');
-    const relevantReviews = db.prepare(`
-      SELECT advice, lighting, foot_traffic, harassment_concern, overall_feeling
-      FROM reviews
-      WHERE location_id IN (${placeholders}) AND moderation_status = 'approved'
-      ORDER BY created_at DESC LIMIT 6
-    `).all(...matchedLocIds);
+  if (db && matchedLocIds.length > 0) {
+    try {
+      const placeholders = matchedLocIds.map(() => '?').join(',');
+      const relevantReviews = db.prepare(`
+        SELECT advice, lighting, foot_traffic, harassment_concern, overall_feeling
+        FROM reviews
+        WHERE location_id IN (${placeholders}) AND moderation_status = 'approved'
+        ORDER BY created_at DESC LIMIT 6
+      `).all(...matchedLocIds);
 
-    if (relevantReviews.length > 0) {
-      realAdvice = relevantReviews.filter(r => r.advice && r.advice.trim().length > 0).map(r => r.advice);
-      harassmentCount = relevantReviews.filter(r => r.harassment_concern).length;
+      if (relevantReviews.length > 0) {
+        realAdvice = relevantReviews.filter(r => r.advice && r.advice.trim().length > 0).map(r => r.advice);
+        harassmentCount = relevantReviews.filter(r => r.harassment_concern).length;
+      }
+
+      // Blend location score
+      const avgScore = db.prepare(`
+        SELECT AVG(lighting_score) as avg_l, AVG(crowd_score) as avg_c
+        FROM locations WHERE id IN (${placeholders})
+      `).get(...matchedLocIds);
+
+      if (avgScore && avgScore.avg_l) avgLightScore = Number(avgScore.avg_l.toFixed(1));
+      if (avgScore && avgScore.avg_c) avgCrowdScore = Number(avgScore.avg_c.toFixed(1));
+    } catch (dbErr) {
+      console.warn('[SafeStreets] Error querying reviews for dynamic route:', dbErr.message);
     }
-
-    // Blend location score
-    const avgScore = db.prepare(`
-      SELECT AVG(lighting_score) as avg_l, AVG(crowd_score) as avg_c
-      FROM locations WHERE id IN (${placeholders})
-    `).get(...matchedLocIds);
-
-    if (avgScore && avgScore.avg_l) avgLightScore = Number(avgScore.avg_l.toFixed(1));
-    if (avgScore && avgScore.avg_c) avgCrowdScore = Number(avgScore.avg_c.toFixed(1));
   }
 
   // Adjust metrics for after dark
@@ -409,5 +452,7 @@ function generateDynamicRoutes(origin, destination, timeOfDay, travelMode) {
 module.exports = {
   compareRoutes,
   KNOWN_CORRIDORS,
-  haversineDistanceKm
+  haversineDistanceKm,
+  normalizeTimeOfDay,
+  normalizeTravelMode
 };

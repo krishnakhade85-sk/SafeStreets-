@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "SafeStreets Mumbai - Women-led community safety map and route guidance platform",
   "main": "server/server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "start": "node server/server.js",
     "test": "node --test test/suite.test.js"
