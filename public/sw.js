@@ -62,10 +62,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API calls: Network first with graceful offline response
+  // API calls: Network first, caching GET responses for offline use
   if (event.request.url.includes('/api/')) {
     event.respondWith(
       fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
         .catch(() => {
           return caches.match(event.request).then((cached) => {
             if (cached) return cached;

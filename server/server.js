@@ -10,7 +10,7 @@ const path = require('node:path');
 const { getDb, recalculateLocation, recalculateAllLocations } = require('./db.js');
 const { scanAndRedact } = require('./moderation.js');
 const { compareRoutes } = require('./routes.js');
-const { loginModerator, verifySession, generateAnonymousToken } = require('./auth.js');
+const { loginModerator, verifySession, logoutModerator, generateAnonymousToken } = require('./auth.js');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -27,6 +27,37 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2'
 };
+
+// Sliding window rate limiter for security & abuse prevention
+const rateLimitStores = {
+  login: new Map(),
+  reviews: new Map(),
+  flags: new Map()
+};
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+}
+
+function checkRateLimit(type, clientIp, limit, windowMs) {
+  const now = Date.now();
+  const store = rateLimitStores[type];
+  if (!store) return true;
+
+  let record = store.get(clientIp);
+  if (!record || now > record.resetTime) {
+    record = { count: 1, resetTime: now + windowMs };
+    store.set(clientIp, record);
+    return true;
+  }
+
+  if (record.count >= limit) {
+    return false;
+  }
+
+  record.count++;
+  return true;
+}
 
 // JSON helper
 function sendJson(res, statusCode, data) {
@@ -76,9 +107,18 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
   const method = req.method.toUpperCase();
+  const clientIp = getClientIp(req);
 
-  // Basic CORS support
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Safe CORS support with configurable allowed origins
+  const origin = req.headers['origin'];
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (allowedOrigins.length > 0) {
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -142,7 +182,13 @@ const server = http.createServer(async (req, res) => {
       } else if (filter === 'low_visibility') {
         conditions.push('lighting_score <= 3.2');
       } else if (filter === 'harassment_concern') {
-        conditions.push("community_signal = 'avoid_alone' OR community_signal = 'use_caution'");
+        conditions.push("(community_signal = 'avoid_alone' OR community_signal = 'use_caution')");
+      } else if (['after_dark', 'evening', 'morning', 'afternoon'].includes(filter)) {
+        conditions.push(`id IN (
+          SELECT DISTINCT location_id FROM reviews
+          WHERE time_of_day = ? AND moderation_status = 'approved'
+        )`);
+        params.push(filter);
       }
 
       if (conditions.length > 0) {
@@ -188,7 +234,7 @@ const server = http.createServer(async (req, res) => {
                overall_feeling, redacted_text as experience_text, advice,
                lighting, foot_traffic, shops_open, transit_access,
                security_presence, road_condition, harassment_concern,
-               stalking_concern, isolated_area, created_at
+               stalking_concern, isolated_area, photo_url, created_at
         FROM reviews
         WHERE location_id = ? AND moderation_status = 'approved'
       `;
@@ -225,6 +271,10 @@ const server = http.createServer(async (req, res) => {
 
     // 4. POST /api/reviews (Submit anonymous review)
     if (method === 'POST' && pathname === '/api/reviews') {
+      if (!checkRateLimit('reviews', clientIp, 15, 60 * 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Rate limit exceeded: Please wait before submitting more reviews.' });
+      }
+
       const data = await parseJsonBody(req);
 
       if (!data.user_confirmed_no_pii) {
@@ -237,10 +287,51 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'A road, area, landmark, or station is required.' });
       }
 
+      const rawText = String(data.experience_text || '').trim();
+      const rawAdvice = String(data.advice || '').trim();
+
+      if (rawText.length < 5 || rawText.length > 2500) {
+        return sendJson(res, 400, { error: 'Observation text must be between 5 and 2500 characters.' });
+      }
+
+      if (rawAdvice.length > 500) {
+        return sendJson(res, 400, { error: 'Advice must be under 500 characters.' });
+      }
+
+      // Validate enum fields
+      const VALID_FEELINGS = ['comfortable', 'use_caution', 'avoid_alone'];
+      const VALID_TIMES = ['morning', 'afternoon', 'evening', 'after_dark'];
+      const VALID_MODES = ['walk', 'public_transit', 'cab_auto', 'bike'];
+      const VALID_LIGHTINGS = ['well_lit', 'moderate', 'dim', 'pitch_dark'];
+      const VALID_TRAFFIC = ['crowded', 'active', 'quiet', 'deserted'];
+      const VALID_SHOPS = ['many', 'some', 'few', 'none'];
+      const VALID_TRANSIT = ['direct', 'short_walk', 'far', 'none'];
+      const VALID_SECURITY = ['police_booth', 'occasional_patrol', 'private_guards', 'none'];
+      const VALID_ROAD = ['wide_footpath', 'paved', 'broken', 'construction'];
+
+      const feeling = VALID_FEELINGS.includes(data.overall_feeling) ? data.overall_feeling : 'comfortable';
+      const timeOfDay = VALID_TIMES.includes(data.time_of_day) ? data.time_of_day : 'evening';
+      const travelMode = VALID_MODES.includes(data.travel_mode) ? data.travel_mode : 'walk';
+      const lighting = VALID_LIGHTINGS.includes(data.lighting) ? data.lighting : 'moderate';
+      const footTraffic = VALID_TRAFFIC.includes(data.foot_traffic) ? data.foot_traffic : 'active';
+      const shopsOpen = VALID_SHOPS.includes(data.shops_open) ? data.shops_open : 'some';
+      const transitAccess = VALID_TRANSIT.includes(data.transit_access) ? data.transit_access : 'short_walk';
+      const securityPresence = VALID_SECURITY.includes(data.security_presence) ? data.security_presence : 'occasional_patrol';
+      const roadCondition = VALID_ROAD.includes(data.road_condition) ? data.road_condition : 'paved';
+
+      // Validate optional photo
+      let photoUrl = null;
+      if (data.photo_url && typeof data.photo_url === 'string') {
+        if ((data.photo_url.startsWith('data:image/') || data.photo_url.startsWith('https://')) && data.photo_url.length <= 1500000) {
+          photoUrl = data.photo_url;
+        }
+      }
+
       // If location is a new name entered by user, insert into locations table
       let locId = data.location_id;
       if (!locId && data.location_name) {
-        const slug = data.location_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const cleanName = String(data.location_name).trim().slice(0, 150);
+        const slug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const existing = db.prepare('SELECT id FROM locations WHERE slug = ?').get(slug);
         if (existing) {
           locId = existing.id;
@@ -253,21 +344,28 @@ const server = http.createServer(async (req, res) => {
           `);
           const result = insertLoc.run(
             slug,
-            data.location_name,
-            data.zone || 'Mumbai',
-            data.category || 'arterial_road',
-            data.lat || 19.0760,
-            data.lng || 72.8777,
-            data.address_hint || 'Community added location',
+            cleanName,
+            String(data.zone || 'Mumbai').slice(0, 50),
+            String(data.category || 'arterial_road').slice(0, 50),
+            Number(data.lat) || 19.0760,
+            Number(data.lng) || 72.8777,
+            String(data.address_hint || 'Community added location').slice(0, 150),
             new Date().toISOString()
           );
           locId = result.lastInsertRowid;
         }
       }
 
+      // Anti-duplicate spam check (same text within 60s)
+      const duplicateCheck = db.prepare(`
+        SELECT id FROM reviews 
+        WHERE location_id = ? AND experience_text = ? AND created_at >= datetime('now', '-60 seconds')
+      `).get(locId, rawText);
+      if (duplicateCheck) {
+        return sendJson(res, 429, { error: 'Duplicate review detected. Please wait before submitting again.' });
+      }
+
       // Perform server-side PII scan and auto-redaction
-      const rawText = data.experience_text || '';
-      const rawAdvice = data.advice || '';
       const textScan = scanAndRedact(rawText);
       const adviceScan = scanAndRedact(rawAdvice);
 
@@ -295,22 +393,22 @@ const server = http.createServer(async (req, res) => {
         locId,
         anonymousToken,
         data.date_of_experience || now.split('T')[0],
-        data.time_of_day || 'evening',
-        data.travel_mode || 'walk',
-        data.overall_feeling || 'comfortable',
+        timeOfDay,
+        travelMode,
+        feeling,
         rawText,
         textScan.redactedText,
         adviceScan.redactedText,
-        data.lighting || 'moderate',
-        data.foot_traffic || 'active',
-        data.shops_open || 'some',
-        data.transit_access || 'short_walk',
-        data.security_presence || 'occasional_patrol',
-        data.road_condition || 'paved',
+        lighting,
+        footTraffic,
+        shopsOpen,
+        transitAccess,
+        securityPresence,
+        roadCondition,
         data.harassment_concern ? 1 : 0,
         data.stalking_concern ? 1 : 0,
         data.isolated_area ? 1 : 0,
-        data.photo_url || null,
+        photoUrl,
         JSON.stringify(allFlags),
         now
       );
@@ -399,21 +497,30 @@ const server = http.createServer(async (req, res) => {
     }
 
     // 8. POST /api/flags (Report a review or content)
+    // 8. POST /api/flags (Report a review or content)
     if (method === 'POST' && pathname === '/api/flags') {
+      if (!checkRateLimit('flags', clientIp, 15, 60 * 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Rate limit exceeded: Please wait before submitting more reports.' });
+      }
+
       const body = await parseJsonBody(req);
       if (!body.target_id || !body.reason) {
         return sendJson(res, 400, { error: 'Target ID and reason are required.' });
       }
+
+      const VALID_FLAG_REASONS = ['pii_leak', 'private_residence', 'inaccurate', 'inappropriate', 'other'];
+      const reason = VALID_FLAG_REASONS.includes(body.reason) ? body.reason : 'other';
+      const details = String(body.details || '').slice(0, 1000);
 
       const insertFlag = db.prepare(`
         INSERT INTO flags (target_type, target_id, reason, details, status, created_at)
         VALUES (?, ?, ?, ?, 'open', ?)
       `);
       insertFlag.run(
-        body.target_type || 'review',
-        body.target_id,
-        body.reason,
-        body.details || '',
+        String(body.target_type || 'review').slice(0, 50),
+        parseInt(body.target_id, 10) || 1,
+        reason,
+        details,
         new Date().toISOString()
       );
 
@@ -425,6 +532,10 @@ const server = http.createServer(async (req, res) => {
 
     // 9. POST /api/auth/login (Moderator login)
     if (method === 'POST' && pathname === '/api/auth/login') {
+      if (!checkRateLimit('login', clientIp, 5, 15 * 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Too many login attempts. Please wait 15 minutes before trying again.' });
+      }
+
       const body = await parseJsonBody(req);
       const result = loginModerator(body.username, body.password);
       if (!result.success) {
@@ -433,7 +544,14 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, result);
     }
 
-    // 10. GET /api/mod/pending (List pending reviews for moderation)
+    // 9b. POST /api/auth/logout (Moderator logout)
+    if (method === 'POST' && pathname === '/api/auth/logout') {
+      const authHeader = req.headers['authorization'];
+      logoutModerator(authHeader);
+      return sendJson(res, 200, { success: true, message: 'Logged out successfully' });
+    }
+
+    // 10. GET /api/mod/pending (List pending & escalated reviews for moderation)
     if (method === 'GET' && pathname === '/api/mod/pending') {
       const session = requireModerator(req, res);
       if (!session) return;
@@ -442,14 +560,14 @@ const server = http.createServer(async (req, res) => {
         SELECT r.*, l.name as location_name 
         FROM reviews r 
         JOIN locations l ON r.location_id = l.id 
-        WHERE r.moderation_status = 'pending'
-        ORDER BY r.created_at ASC
+        WHERE r.moderation_status IN ('pending', 'escalated')
+        ORDER BY CASE WHEN r.moderation_status = 'escalated' THEN 0 ELSE 1 END, r.created_at ASC
       `).all();
 
       return sendJson(res, 200, { pending, total: pending.length });
     }
 
-    // 11. POST /api/mod/action (Approve, reject, edit/redact, or hide review)
+    // 11. POST /api/mod/action (Approve, reject, edit/redact, escalate, or hide review)
     if (method === 'POST' && pathname === '/api/mod/action') {
       const session = requireModerator(req, res);
       if (!session) return;
@@ -487,6 +605,12 @@ const server = http.createServer(async (req, res) => {
           WHERE id = ?
         `).run(redacted_text || review.redacted_text, advice || review.advice, review_id);
         recalculateLocation(db, review.location_id);
+      } else if (action === 'escalate') {
+        db.prepare(`
+          UPDATE reviews 
+          SET moderation_status = 'escalated'
+          WHERE id = ?
+        `).run(review_id);
       } else if (action === 'hide') {
         db.prepare(`
           UPDATE reviews 
@@ -587,10 +711,18 @@ const server = http.createServer(async (req, res) => {
     // ==========================================
     // STATIC ASSETS SERVING
     // ==========================================
+    if (req.url.includes('..') || pathname.includes('..')) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+
     let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
 
     // Prevent directory traversal
-    if (!filePath.startsWith(PUBLIC_DIR)) {
+    const resolvedPublic = path.resolve(PUBLIC_DIR);
+    const resolvedPath = path.resolve(filePath);
+    if (!resolvedPath.startsWith(resolvedPublic + path.sep) && resolvedPath !== path.join(resolvedPublic, 'index.html')) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
       res.end('Forbidden');
       return;

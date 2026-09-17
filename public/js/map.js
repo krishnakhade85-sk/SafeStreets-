@@ -135,13 +135,17 @@ function showSafetySummaryCard(loc) {
     day: 'numeric', month: 'short', year: 'numeric'
   }) : 'Recently updated';
 
+  const cleanName = escapeHtml(loc.name);
+  const cleanZone = escapeHtml(loc.zone);
+  const cleanAdvice = escapeHtml(adviceQuote);
+
   card.innerHTML = `
     <div class="summary-card-header">
       <div>
-        <h3 class="summary-card-title">${loc.name}</h3>
-        <p class="summary-card-subtitle">${loc.zone} • ${formatCategory(loc.category)}</p>
+        <h3 class="summary-card-title">${cleanName}</h3>
+        <p class="summary-card-subtitle">${cleanZone} • ${formatCategory(loc.category)}</p>
       </div>
-      <button class="modal-close-btn" onclick="hideSafetySummaryCard()" title="Close summary">×</button>
+      <button class="modal-close-btn" onclick="SafeStreetsMap.hideSafetySummaryCard()" title="Close summary">×</button>
     </div>
 
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
@@ -177,7 +181,7 @@ function showSafetySummaryCard(loc) {
     </div>
 
     <div class="summary-advice-quote">
-      ${adviceQuote}
+      ${cleanAdvice}
     </div>
 
     <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.85rem;">
@@ -218,6 +222,53 @@ function escapeQuote(str) {
   return (str || '').replace(/'/g, "\\'");
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function triggerSearch() {
+  const searchInput = document.getElementById('map-search-input');
+  const query = searchInput ? searchInput.value.trim() : '';
+  loadMapLocations(activeFilter, query);
+}
+
+async function focusLocation(locationId) {
+  const numId = parseInt(locationId, 10);
+  if (isNaN(numId)) return;
+
+  if (!mapInstance) {
+    initMap();
+  }
+
+  let loc = currentLocations.find(l => l.id === numId);
+  if (!loc) {
+    await loadMapLocations('all', '');
+    loc = currentLocations.find(l => l.id === numId);
+  }
+
+  if (!loc) {
+    try {
+      const data = await SafeStreetsAPI.getLocationDetails(numId);
+      if (data && data.location) {
+        loc = data.location;
+      }
+    } catch (e) {
+      console.error('Failed to load location details for focus:', e);
+    }
+  }
+
+  if (loc && mapInstance) {
+    mapInstance.setView([loc.lat, loc.lng], 15, { animate: true });
+    showSafetySummaryCard(loc);
+  }
+}
+
 // Bind search input with debounced load
 function setupMapControls() {
   const searchInput = document.getElementById('map-search-input');
@@ -249,5 +300,7 @@ window.SafeStreetsMap = {
   renderMarkers,
   showSafetySummaryCard,
   hideSafetySummaryCard,
-  setupMapControls
+  setupMapControls,
+  triggerSearch,
+  focusLocation
 };

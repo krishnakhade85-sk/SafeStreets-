@@ -89,6 +89,18 @@ const API = {
     return res.json();
   },
 
+  async modLogout(token) {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      return res.json();
+    } catch {
+      return { success: true };
+    }
+  },
+
   async getModPending(token) {
     const res = await fetch(`${API_BASE}/api/mod/pending`, {
       headers: { 'Authorization': `Bearer ${token}` }

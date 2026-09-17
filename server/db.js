@@ -19,6 +19,11 @@ function getDb() {
 }
 
 function initSchema(db) {
+  // SQLite PRAGMAs for concurrency, foreign keys, and reliability
+  db.exec('PRAGMA foreign_keys = ON;');
+  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA busy_timeout = 5000;');
+
   // 1. Locations Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS locations (
@@ -102,6 +107,27 @@ function initSchema(db) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+  `);
+
+  // 6. Persistent Moderator Sessions Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'moderator',
+      expires_at INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    );
+  `);
+
+  // 7. Performance & Integrity Indexes
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_reviews_loc_status ON reviews(location_id, moderation_status);
+    CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(moderation_status);
+    CREATE INDEX IF NOT EXISTS idx_reviews_created ON reviews(created_at);
+    CREATE INDEX IF NOT EXISTS idx_flags_status ON flags(status);
+    CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
   `);
 
   // Seed default settings if not exists

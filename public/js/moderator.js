@@ -75,7 +75,14 @@ async function handleModLogin(e) {
   }
 }
 
-function handleModLogout() {
+async function handleModLogout() {
+  if (modToken) {
+    try {
+      await SafeStreetsAPI.modLogout(modToken);
+    } catch (e) {
+      console.warn('Logout API error:', e);
+    }
+  }
   modToken = null;
   sessionStorage.removeItem('safestreets_mod_token');
   showLoginView();
@@ -278,8 +285,25 @@ function openRedactModal(reviewId) {
   });
 }
 
-function escalateReview(reviewId) {
-  SafeStreetsApp.showToast(`Review #${reviewId} marked as escalated for supervisor verification`);
+async function escalateReview(reviewId) {
+  const reason = prompt('Enter escalation reason or context for senior moderation:', 'Requires supervisor verification');
+  if (reason === null) return;
+
+  try {
+    const res = await SafeStreetsAPI.takeModAction(modToken, {
+      review_id: reviewId,
+      action: 'escalate',
+      reason
+    });
+    if (res.success) {
+      SafeStreetsApp.showToast(`Review #${reviewId} escalated for senior verification`);
+      loadPendingQueue();
+    } else {
+      SafeStreetsApp.showToast(res.error || 'Failed to escalate review');
+    }
+  } catch (err) {
+    SafeStreetsApp.showToast('Escalation failed: ' + err.message);
+  }
 }
 
 // 2. Flags Queue

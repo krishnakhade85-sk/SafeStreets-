@@ -280,7 +280,7 @@
           Frequently Explored Mumbai Transit Corridors
         </h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
-          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+          <div class="card card-interactive" onclick="SafeStreetsApp.focusLocationOnMap(1)" style="cursor: pointer;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
               <h4 style="color: var(--color-plum);">Dadar West Station</h4>
               <span class="signal-badge comfortable"><span class="signal-dot"></span>Comfortable</span>
@@ -288,7 +288,7 @@
             <p style="font-size: 0.85rem; color: var(--text-muted);">Active floral market, well-lit auto stands, constant passenger volume until late.</p>
           </div>
 
-          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+          <div class="card card-interactive" onclick="SafeStreetsApp.focusLocationOnMap(4)" style="cursor: pointer;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
               <h4 style="color: var(--color-plum);">BKC Financial District</h4>
               <span class="signal-badge caution"><span class="signal-dot"></span>Use Caution</span>
@@ -296,7 +296,7 @@
             <p style="font-size: 0.85rem; color: var(--text-muted);">Wide corporate avenues with great lighting, but pedestrian crowds drop sharply after 9 PM.</p>
           </div>
 
-          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+          <div class="card card-interactive" onclick="SafeStreetsApp.focusLocationOnMap(5)" style="cursor: pointer;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
               <h4 style="color: var(--color-plum);">Kurla West Skywalk</h4>
               <span class="signal-badge avoid"><span class="signal-dot"></span>Avoid Alone</span>
@@ -304,7 +304,7 @@
             <p style="font-size: 0.85rem; color: var(--text-muted);">Dim sections reported on elevated walkway after dark. Prefer ground station road.</p>
           </div>
 
-          <div class="card card-interactive" onclick="SafeStreetsApp.navigate('map')">
+          <div class="card card-interactive" onclick="SafeStreetsApp.focusLocationOnMap(6)" style="cursor: pointer;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
               <h4 style="color: var(--color-plum);">Marine Drive Promenade</h4>
               <span class="signal-badge comfortable"><span class="signal-dot"></span>Comfortable</span>
@@ -325,13 +325,13 @@
 
         <!-- Floating Search & Filters Header -->
         <div class="map-floating-controls">
-          <div class="map-search-bar">
+          <form class="map-search-bar" id="map-search-form" onsubmit="event.preventDefault(); if (window.SafeStreetsMap) SafeStreetsMap.triggerSearch();">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-plum)" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input type="text" class="map-search-input" id="map-search-input" placeholder="Search roads, stations, landmarks (e.g. Dadar, BKC, Bandra)..." aria-label="Search map locations">
-            <button class="map-search-btn" title="Search Mumbai Locations">
+            <button type="submit" class="map-search-btn" id="map-search-btn" title="Search Mumbai Locations" aria-label="Submit Search">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-          </div>
+          </form>
 
           <!-- Filter Chips Scroll -->
           <div class="map-floating-chips">
@@ -984,60 +984,39 @@
   </div>
 
   <!-- 3. Report Content / Flag Modal -->
-  <div class="modal-overlay" id="flag-modal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" id="flag-modal" role="dialog" aria-modal="true" aria-labelledby="flag-modal-heading">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 style="color: var(--color-plum);">Report This Review</h3>
+        <h3 id="flag-modal-heading" style="color: var(--color-plum);">Report This Review</h3>
         <button class="modal-close-btn" onclick="SafeStreetsApp.closeFlagModal()" title="Close">&times;</button>
       </div>
       <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem;">
         Help keep SafeStreets private, respectful, and accurate. Why are you reporting this review?
       </p>
-      <form onsubmit="SafeStreetsApp.handleReportContentSubmit(event)">
+      <form id="flag-modal-form" onsubmit="SafeStreetsApp.handleModalFlagSubmit(event)">
+        <input type="hidden" id="flag-modal-target-type" value="review">
+        <input type="hidden" id="flag-modal-target-id" value="1">
         <div class="form-group">
-          <label class="form-label">Select Issue</label>
+          <label class="form-label" for="flag-modal-reason">Select Issue</label>
           <select class="form-select" id="flag-modal-reason" required>
             <option value="pii_leak">Contains personal phone numbers, names, or addresses</option>
-            <option value="private_residence">Refers to a private home</option>
+            <option value="private_residence">Refers to a private home rather than public area</option>
             <option value="inappropriate">Abusive language or spam</option>
             <option value="inaccurate">Inaccurate / misleading information</option>
+            <option value="other">Other safety concern</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Additional context</label>
+          <label class="form-label" for="flag-modal-details">Additional context</label>
           <input type="text" class="form-input" id="flag-modal-details" placeholder="Brief detail..." required>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
           <button type="button" class="btn btn-outline" onclick="SafeStreetsApp.closeFlagModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Submit Report</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-modal-flag">Submit Report</button>
         </div>
       </form>
     </div>
   </div>
-
-  <!-- Mobile Bottom Navigation Bar -->
-  <nav class="mobile-bottom-bar" role="navigation" aria-label="Mobile Navigation">
-    <button class="mobile-nav-item active" data-navigate="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-      <span>Home</span>
-    </button>
-    <button class="mobile-nav-item" data-navigate="map">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-      <span>Map</span>
-    </button>
-    <button class="mobile-nav-item" data-navigate="route">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H12"/></svg>
-      <span>Routes</span>
-    </button>
-    <button class="mobile-nav-item" data-navigate="review">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      <span>Review</span>
-    </button>
-    <button class="mobile-nav-item" onclick="SafeStreetsEmergency.openUrgentHelpModal()" style="color: var(--signal-avoid);">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke="var(--signal-avoid)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-      <span>SOS</span>
-    </button>
-  </nav>
 
   <!-- App Footer -->
   <footer class="app-footer" role="contentinfo">

@@ -86,34 +86,44 @@ function initReviewForm() {
   form.addEventListener('submit', handleReviewSubmit);
 }
 
+let locationsLoadedPromise = null;
+let pendingPrefillId = null;
+
 async function populateLocationSelect() {
   const select = document.getElementById('rev-location-select');
   if (!select) return;
 
-  try {
-    const data = await SafeStreetsAPI.getLocations('all');
-    const locs = data.locations || [];
-    
-    let html = '<option value="">Select a known road, station, or landmark...</option>';
-    locs.forEach(l => {
-      html += `<option value="${l.id}">${l.name} (${l.zone})</option>`;
-    });
-    html += '<option value="custom">+ Add another road or public area in Mumbai...</option>';
-    select.innerHTML = html;
+  locationsLoadedPromise = SafeStreetsAPI.getLocations('all')
+    .then(data => {
+      const locs = data.locations || [];
+      let html = '<option value="">Select a known road, station, or landmark...</option>';
+      locs.forEach(l => {
+        html += `<option value="${l.id}">${l.name} (${l.zone})</option>`;
+      });
+      html += '<option value="custom">+ Add another road or public area in Mumbai...</option>';
+      select.innerHTML = html;
 
-    select.addEventListener('change', (e) => {
-      const customWrap = document.getElementById('rev-custom-location-wrap');
-      if (e.target.value === 'custom') {
-        if (customWrap) customWrap.style.display = 'block';
-        reviewFormData.location_id = null;
-      } else {
-        if (customWrap) customWrap.style.display = 'none';
-        reviewFormData.location_id = e.target.value ? parseInt(e.target.value, 10) : null;
+      if (pendingPrefillId) {
+        select.value = String(pendingPrefillId);
+        reviewFormData.location_id = parseInt(pendingPrefillId, 10);
       }
+    })
+    .catch(err => {
+      console.error('Failed to populate locations:', err);
     });
-  } catch (err) {
-    console.error('Failed to populate locations:', err);
-  }
+
+  select.addEventListener('change', (e) => {
+    const customWrap = document.getElementById('rev-custom-location-wrap');
+    if (e.target.value === 'custom') {
+      if (customWrap) customWrap.style.display = 'block';
+      reviewFormData.location_id = null;
+    } else {
+      if (customWrap) customWrap.style.display = 'none';
+      reviewFormData.location_id = e.target.value ? parseInt(e.target.value, 10) : null;
+    }
+  });
+
+  return locationsLoadedPromise;
 }
 
 function setupObsButtons(groupClass, onChange) {
@@ -328,11 +338,37 @@ function showSubmissionSuccess(result) {
 
 window.SafeStreetsReview = {
   initReviewForm,
-  prefillLocation: (locId, locName) => {
+  prefillLocation: async (locId, locName) => {
+    pendingPrefillId = locId;
+    reviewFormData.location_id = locId ? parseInt(locId, 10) : null;
     const select = document.getElementById('rev-location-select');
-    if (select) {
-      select.value = locId;
-      reviewFormData.location_id = locId;
+    if (!select) return;
+
+    if (locationsLoadedPromise) {
+      await locationsLoadedPromise;
     }
+
+    let found = false;
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value == locId) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found && locId && locName) {
+      const opt = document.createElement('option');
+      opt.value = locId;
+      opt.textContent = locName;
+      if (select.lastElementChild) {
+        select.insertBefore(opt, select.lastElementChild);
+      } else {
+        select.appendChild(opt);
+      }
+    }
+
+    select.value = String(locId);
+    const customWrap = document.getElementById('rev-custom-location-wrap');
+    if (customWrap) customWrap.style.display = 'none';
   }
 };

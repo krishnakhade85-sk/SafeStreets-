@@ -94,12 +94,20 @@ const I18N_STRINGS = {
   }
 };
 
-let currentLang = 'en';
+let currentLang = (typeof localStorage !== 'undefined' && localStorage.getItem('safestreets_lang')) || 'en';
+if (!I18N_STRINGS[currentLang]) currentLang = 'en';
 
 function setLanguage(lang) {
   if (I18N_STRINGS[lang]) {
     currentLang = lang;
+    try {
+      localStorage.setItem('safestreets_lang', lang);
+    } catch (e) {}
     document.documentElement.setAttribute('lang', lang);
+    const select = document.getElementById('app-lang-select');
+    if (select && select.value !== lang) {
+      select.value = lang;
+    }
     applyTranslations();
   }
 }
@@ -111,6 +119,12 @@ function t(key) {
 }
 
 function applyTranslations() {
+  document.documentElement.setAttribute('lang', currentLang);
+  const select = document.getElementById('app-lang-select');
+  if (select && select.value !== currentLang) {
+    select.value = currentLang;
+  }
+
   document.querySelectorAll('[data-i18n]').forEach(elem => {
     const key = elem.getAttribute('data-i18n');
     const translation = t(key);

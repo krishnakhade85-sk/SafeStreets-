@@ -110,6 +110,16 @@ const SafeStreetsApp = {
     }
   },
 
+  // Focus specific location on the interactive map
+  focusLocationOnMap(locationId) {
+    this.navigate('map');
+    setTimeout(() => {
+      if (window.SafeStreetsMap) {
+        SafeStreetsMap.focusLocation(locationId);
+      }
+    }, 250);
+  },
+
   // Location Detail Modal
   async openLocationModal(locationId) {
     const modal = document.getElementById('location-detail-modal');
@@ -139,7 +149,7 @@ const SafeStreetsApp = {
         reviewsHtml = `
           <div class="card" style="text-align: center; padding: 2rem;">
             <p style="color: var(--text-muted); font-size: 0.9rem;">
-              No detailed reviews yet. Be the first woman to share your experience of ${loc.name}.
+              No detailed reviews yet. Be the first woman to share your experience of ${this.escapeHtml(loc.name)}.
             </p>
             <button class="btn btn-primary btn-sm" style="margin-top: 1rem;" onclick="SafeStreetsApp.openReviewForLocation(${loc.id}, '${this.escapeQuote(loc.name)}')">
               Share Your Experience
@@ -148,6 +158,13 @@ const SafeStreetsApp = {
         `;
       } else {
         reviews.forEach(r => {
+          const photoHtml = r.photo_url ? `
+            <div style="margin-top: 0.75rem;">
+              <img src="${this.escapeHtml(r.photo_url)}" alt="Street condition" style="max-height: 180px; width: 100%; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--border-light); cursor: pointer;" onclick="window.open('${this.escapeHtml(r.photo_url)}', '_blank')">
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">📷 Privacy-Safe Road Observation Photo</div>
+            </div>
+          ` : '';
+
           reviewsHtml += `
             <div class="card" style="margin-bottom: 1rem; padding: 1.25rem;">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
@@ -156,7 +173,7 @@ const SafeStreetsApp = {
                   ${r.overall_feeling.replace('_', ' ')}
                 </span>
                 <span style="font-size: 0.8rem; color: var(--text-muted);">
-                  ${r.date_of_experience} • ${r.time_of_day.replace('_', ' ')}
+                  ${this.escapeHtml(r.date_of_experience)} • ${r.time_of_day.replace('_', ' ')}
                 </span>
               </div>
               <p style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem; line-height: 1.5;">
@@ -167,7 +184,8 @@ const SafeStreetsApp = {
                   Tip: ${this.escapeHtml(r.advice)}
                 </div>
               ` : ''}
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border-light); padding-top: 0.5rem;">
+              ${photoHtml}
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--border-light); padding-top: 0.5rem; margin-top: 0.5rem;">
                 <span>Mode: ${r.travel_mode.replace('_', ' ')}</span>
                 <button style="background: none; border: none; color: var(--text-light); cursor: pointer; text-decoration: underline;" onclick="SafeStreetsApp.openFlagModal('review', ${r.id})">
                   Report review
@@ -182,8 +200,8 @@ const SafeStreetsApp = {
         <div style="margin-bottom: 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
             <div>
-              <h2 style="font-size: 1.5rem; color: var(--color-plum);">${loc.name}</h2>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">${loc.address_hint || loc.zone}</p>
+              <h2 style="font-size: 1.5rem; color: var(--color-plum);">${this.escapeHtml(loc.name)}</h2>
+              <p style="font-size: 0.85rem; color: var(--text-muted);">${this.escapeHtml(loc.address_hint || loc.zone)}</p>
             </div>
             <span class="signal-badge ${signal}">
               <span class="signal-dot"></span>
@@ -233,14 +251,23 @@ const SafeStreetsApp = {
     SafeStreetsReview.prefillLocation(locId, locName);
   },
 
+  focusLocationOnMap(id) {
+    this.navigate('map');
+    setTimeout(() => {
+      if (window.SafeStreetsMap && SafeStreetsMap.focusLocation) {
+        SafeStreetsMap.focusLocation(id);
+      }
+    }, 200);
+  },
+
   // Content Flagging / Removal Request
   openFlagModal(targetType, targetId) {
     const modal = document.getElementById('flag-modal');
-    const inputType = document.getElementById('flag-target-type');
-    const inputId = document.getElementById('flag-target-id');
-    if (modal && inputType && inputId) {
-      inputType.value = targetType;
-      inputId.value = targetId;
+    const inputType = document.getElementById('flag-modal-target-type') || document.getElementById('flag-target-type');
+    const inputId = document.getElementById('flag-modal-target-id') || document.getElementById('flag-target-id');
+    if (modal) {
+      if (inputType) inputType.value = targetType;
+      if (inputId) inputId.value = targetId;
       modal.classList.add('active');
     }
   },
@@ -250,9 +277,38 @@ const SafeStreetsApp = {
     if (modal) modal.classList.remove('active');
   },
 
+  // Modal flag submission handler
+  async handleModalFlagSubmit(e) {
+    e.preventDefault();
+    const targetType = document.getElementById('flag-modal-target-type')?.value || 'review';
+    const targetId = document.getElementById('flag-modal-target-id')?.value;
+    const reason = document.getElementById('flag-modal-reason')?.value || 'other';
+    const details = document.getElementById('flag-modal-details')?.value || '';
+
+    try {
+      const res = await SafeStreetsAPI.submitFlag({
+        target_type: targetType,
+        target_id: parseInt(targetId, 10) || 1,
+        reason,
+        details
+      });
+      if (res.success) {
+        this.closeFlagModal();
+        const detailsInput = document.getElementById('flag-modal-details');
+        if (detailsInput) detailsInput.value = '';
+        this.showToast(res.message);
+      } else {
+        this.showToast(res.error || 'Failed to submit report');
+      }
+    } catch (err) {
+      this.showToast('Failed to submit content report');
+    }
+  },
+
+  // Guidelines page static flag form handler
   async handleReportContentSubmit(e) {
     e.preventDefault();
-    const targetType = document.getElementById('flag-target-type')?.value;
+    const targetType = document.getElementById('flag-target-type')?.value || 'review';
     const targetId = document.getElementById('flag-target-id')?.value;
     const reason = document.getElementById('flag-reason')?.value;
     const details = document.getElementById('flag-details')?.value;
@@ -260,13 +316,16 @@ const SafeStreetsApp = {
     try {
       const res = await SafeStreetsAPI.submitFlag({
         target_type: targetType,
-        target_id: parseInt(targetId, 10),
+        target_id: parseInt(targetId, 10) || 1,
         reason,
         details
       });
       if (res.success) {
-        this.closeFlagModal();
+        const detailsInput = document.getElementById('flag-details');
+        if (detailsInput) detailsInput.value = '';
         this.showToast(res.message);
+      } else {
+        this.showToast(res.error || 'Failed to submit report');
       }
     } catch (err) {
       this.showToast('Failed to submit content report');
